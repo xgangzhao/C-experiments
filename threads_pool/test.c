@@ -1,0 +1,44 @@
+#include <stdlib.h>
+#include <stdio.h>
+#include <unistd.h>
+
+#include "tpool.h"
+
+static const size_t num_threads = 4;
+static const size_t num_items = 100;
+
+void worker(void* arg) {
+    int* val = (int*)arg;
+    int old = *val;
+
+    *val += 1000;
+    printf("tid=%ld, old = %d, val = %d\n", pthread_self(), old, *val);
+
+    if ((*val) % 2) {
+        usleep(100000);
+    }
+}
+
+int main() {
+    tpool_t* tm = NULL;
+    int* vals = NULL;
+    
+    tm = tpool_create(num_threads);
+    vals = (int*)calloc(num_items, sizeof(*vals));
+
+    for (size_t i = 0; i < num_items; ++i) {
+        vals[i] = i;
+        tpool_add_work(tm, worker, vals+i);
+    }
+
+    tpool_wait(tm);
+
+    for (size_t i = 0; i < num_items; ++i) {
+        printf("%d\n", vals[i]);
+    }
+
+    free(vals);
+    tpool_destroy(tm);
+
+    return 0;
+}
